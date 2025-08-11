@@ -1,0 +1,205 @@
+# birthdayy
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Happy Birthday — Surprise!</title>
+  <style>
+    :root{--bg:#0f1724;--accent:#ff5eaa;--card:#0b1220;--glass:rgba(255,255,255,0.06)}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:linear-gradient(180deg,#071124 0%, #081025 50%, #071B2A 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:980px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:18px;padding:28px;box-shadow:0 10px 30px rgba(2,6,23,0.6);position:relative;overflow:hidden}
+    header{display:flex;gap:16px;align-items:center}
+    .avatar{width:96px;height:96px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ffd56b);flex-shrink:0;display:grid;place-items:center;font-weight:700;color:#071124;font-size:28px}
+    h1{margin:0;font-size:28px}
+    .sub{color:#a7b7cf;margin-top:6px}
+    .hero{display:flex;gap:20px;align-items:center;margin-top:18px}
+    .left{flex:1}
+    .right{width:320px}
+    .surprise-btn{display:inline-block;padding:14px 18px;border-radius:12px;background:linear-gradient(90deg,var(--accent),#ff9fb8);border:none;color:#071124;font-weight:700;cursor:pointer;font-size:16px;box-shadow:0 6px 18px rgba(255,94,170,0.18)}
+    .small{font-size:14px;color:#c6d7ee}
+    .message{margin-top:12px;padding:16px;border-radius:12px;background:var(--glass);}
+    .typed{font-weight:700;font-size:22px;color:#fff}
+    /* confetti canvas covers entire card */
+    #confetti-canvas{position:absolute;inset:0;pointer-events:none}
+    .controls{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+    .control{background:#071a2a;padding:8px 12px;border-radius:10px;font-size:13px}
+    .photo{width:100%;height:190px;border-radius:12px;object-fit:cover;border:3px solid rgba(255,255,255,0.04)}
+    footer{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+    .balloon{position:absolute;border-radius:50%;width:36px;height:48px;opacity:0.85;filter:drop-shadow(0 6px 10px rgba(2,6,23,0.6))}
+    /* small responsive tweaks */
+    @media (max-width:820px){.hero{flex-direction:column}.right{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="balloon" id="b1" style="background:linear-gradient(180deg,#ff9fb8,#ff5eaa);left:10%;top:10%"></div>
+    <div class="balloon" id="b2" style="background:linear-gradient(180deg,#ffd56b,#ff9fb8);left:80%;top:18%"></div>
+
+    <header>
+      <div class="avatar" id="avatar">🎉</div>
+      <div>
+        <h1 id="title">Happy Birthday, <span id="name">Friend</span>!</h1>
+        <div class="sub">A little surprise I made just for you — click the button below 🎁</div>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="left">
+        <div class="message">
+          <div class="typed" id="typed">Press "Open Surprise" to reveal something special…</div>
+          <div class="small" style="margin-top:8px">Tip: Replace the photo on the right with a picture of your friend, and edit the message in the JS.</div>
+        </div>
+
+        <div class="controls">
+          <div class="control">🎵 <label style="cursor:pointer"><input id="musicToggle" type="checkbox"> Play music</label></div>
+          <button class="surprise-btn" id="openBtn">Open Surprise</button>
+          <button class="control" id="downloadBtn">Download as HTML</button>
+        </div>
+      </div>
+
+      <div class="right">
+        <img id="photo" class="photo" src="https://images.unsplash.com/photo-1504198453319-5ce911bafcde?auto=format&fit=crop&w=800&q=60" alt="Surprise photo">
+      </div>
+    </div>
+
+    <footer>
+      <div class="small">Made with ❤️ — Customize the name & message in the code.</div>
+      <div class="small">Press the button again to replay confetti.</div>
+    </footer>
+  </div>
+
+  <audio id="bgMusic" loop src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_e9465e02c1.mp3?filename=happy-ukulele-10169.mp3"></audio>
+
+  <script>
+    // --- CUSTOMIZABLE FIELDS ---
+    const FRIEND_NAME = 'Asha'; // change to your friend's name
+    const SURPRISE_MESSAGE = [
+      "Wishing you a day filled with love and laughter.",
+      "May your year be as bright as your smile.",
+      "Can't wait to celebrate with you — happy birthday! 🎂"
+    ];
+    const PHOTO_URL = document.getElementById('photo').src; // replace if you like
+    // ---------------------------
+
+    // populate name
+    document.getElementById('name').textContent = FRIEND_NAME;
+    // typed effect
+    const typedEl = document.getElementById('typed');
+
+    function typeLines(lines, el, speed=40){
+      let i=0, li=0, text='';
+      return new Promise(resolve=>{
+        function step(){
+          if(li>=lines.length){ setTimeout(resolve, 600); return }
+          const line = lines[li];
+          if(i<=line.length){
+            el.textContent = line.slice(0,i);
+            i++; setTimeout(step, speed);
+          } else {
+            i=0; li++; setTimeout(step, 700);
+          }
+        }
+        step();
+      })
+    }
+
+    // Confetti implementation (simple particles)
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles=[];
+    function resize(){W=canvas.width=card.clientWidth;H=canvas.height=card.clientHeight}
+    const card = document.getElementById('card');
+    window.addEventListener('resize', resize);
+    resize();
+
+    function spawnConfetti(amount=120){
+      particles = [];
+      for(let i=0;i<amount;i++){
+        particles.push({x:Math.random()*W,y:-10,vy:2+Math.random()*5, vx:(Math.random()-0.5)*6, r:6+Math.random()*8, color:`hsl(${Math.random()*360}deg 70% 65%)`, rot:Math.random()*360, vrot:(Math.random()-0.5)*10})
+      }
+      animate();
+    }
+    let animId=null;
+    function animate(){
+      ctx.clearRect(0,0,W,H);
+      for(let p of particles){
+        p.x += p.vx; p.y += p.vy; p.vy *= 1.01; p.rot += p.vrot;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.65);
+        ctx.restore();
+      }
+      particles = particles.filter(p=>p.y < H+40);
+      if(particles.length>0) animId=requestAnimationFrame(animate); else {ctx.clearRect(0,0,W,H); cancelAnimationFrame(animId);}
+    }
+
+    // Buttons
+    const openBtn = document.getElementById('openBtn');
+    const musicToggle = document.getElementById('musicToggle');
+    const bgMusic = document.getElementById('bgMusic');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    musicToggle.addEventListener('change', ()=>{
+      if(musicToggle.checked){ bgMusic.play().catch(()=>{}); } else { bgMusic.pause(); bgMusic.currentTime=0 }
+    });
+
+    openBtn.addEventListener('click', async ()=>{
+      // animate balloons
+      popBalloons();
+      // show typed message lines
+      await typeLines(SURPRISE_MESSAGE, typedEl, 45);
+      // show confetti
+      spawnConfetti(160);
+      // play a short cheer sound (optional)
+      playCheer();
+      // ensure music on if toggled
+      if(musicToggle.checked) bgMusic.play().catch(()=>{});
+    });
+
+    // Balloon bobbing
+    function popBalloons(){
+      const b1 = document.getElementById('b1');
+      const b2 = document.getElementById('b2');
+      [b1,b2].forEach((b,i)=>{
+        b.animate([{transform:'translateY(0) rotate(0deg)'},{transform:'translateY(-30px) rotate(6deg)'},{transform:'translateY(0) rotate(-6deg)'},{transform:'translateY(-18px) rotate(3deg)'}],{duration:1600,iterations:1,easing:'ease-in-out'});
+      })
+    }
+
+    // small cheer sound using WebAudio (synth-like) so no external files
+    function playCheer(){
+      try{
+        const ac = new (window.AudioContext||window.webkitAudioContext)();
+        const o = ac.createOscillator(); const g = ac.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(880,ac.currentTime);
+        o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0,ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.08,ac.currentTime+0.02);
+        o.start(); o.frequency.exponentialRampToValueAtTime(660,ac.currentTime+0.18);
+        g.gain.linearRampToValueAtTime(0.001,ac.currentTime+0.5);
+        setTimeout(()=>{o.stop(); ac.close();},600);
+      }catch(e){/* ignore */}
+    }
+
+    // Download page as single-file HTML
+    downloadBtn.addEventListener('click', ()=>{
+      const html = `<!doctype html>\n${document.documentElement.outerHTML}`;
+      const blob = new Blob([html],{type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download = `happy-birthday-${FRIEND_NAME.replace(/\s+/g,'_')}.html`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // small polish: set avatar initial to first letter of name or emoji
+    const avatar = document.getElementById('avatar');
+    avatar.textContent = (FRIEND_NAME.trim().length>0)?FRIEND_NAME.trim().charAt(0).toUpperCase(): '🎉';
+
+    // make sure canvas size keeps up with card
+    const ro = new ResizeObserver(()=>{resize()}); ro.observe(card);
+
+    // autoplay permission: try to prewarm audio on first interaction
+    document.addEventListener('click', ()=>{try{bgMusic.play().then(()=>bgMusic.pause());}catch(e){}}
+    ,{once:true});
+  </script>
+</body>
+</html>
